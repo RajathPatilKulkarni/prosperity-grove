@@ -1,11 +1,19 @@
 from backend.env.market_env import MarketEnvironment
 from backend.agents.random_agent import RandomAgent
+from backend.agents.rule_based_agent import RuleBasedAgent
 import statistics
 
 
-def run_episode(prices, seed=None):
+
+def run_episode(prices, agent_type="random", seed=None):
     env = MarketEnvironment(prices)
-    agent = RandomAgent(seed=seed)
+
+    if agent_type == "random":
+        agent = RandomAgent(seed=seed)
+    elif agent_type == "rule_based":
+        agent = RuleBasedAgent()
+    else:
+        raise ValueError(f"Unknown agent type: {agent_type}")
 
     state = env.reset()
     done = False
@@ -20,34 +28,32 @@ def run_episode(prices, seed=None):
         total_reward += reward
         history.append(state["portfolio_value"])
 
-    episode_metrics = {
-        "steps": len(history),
-        "initial_value": history[0],
+    return {
         "final_value": history[-1],
         "total_reward": total_reward,
-        "max_value": max(history),
-        "min_value": min(history),
+        "trajectory": history,
     }
 
-    return episode_metrics
 
-
-def run_experiment(prices, n_episodes=10, seed_start=0):
+def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
     results = []
 
     for i in range(n_episodes):
-        metrics = run_episode(prices, seed=seed_start + i)
+        metrics = run_episode(
+            prices,
+            agent_type=agent_type,
+            seed=seed_start + i
+        )
         results.append(metrics)
 
     final_values = [r["final_value"] for r in results]
     rewards = [r["total_reward"] for r in results]
 
     summary = {
+        "agent": agent_type,
         "episodes": n_episodes,
-        "final_value_mean": statistics.mean(final_values),
-        "final_value_std": statistics.pstdev(final_values),
-        "reward_mean": statistics.mean(rewards),
-        "reward_std": statistics.pstdev(rewards),
+        "final_value_mean": sum(final_values) / len(final_values),
+        "reward_mean": sum(rewards) / len(rewards),
         "best_final_value": max(final_values),
         "worst_final_value": min(final_values),
     }
@@ -61,8 +67,8 @@ def run_experiment(prices, n_episodes=10, seed_start=0):
 if __name__ == "__main__":
     prices = [100, 102, 101, 105, 107, 106, 108]
 
-    experiment = run_experiment(prices, n_episodes=20)
+    random_exp = run_experiment(prices, agent_type="random", n_episodes=20)
+    rule_exp = run_experiment(prices, agent_type="rule_based", n_episodes=1)
 
-    print("Experiment summary:")
-    for k, v in experiment["summary"].items():
-        print(f"{k}: {v}")
+    print("Random agent summary:", random_exp["summary"])
+    print("Rule-based agent summary:", rule_exp["summary"])
