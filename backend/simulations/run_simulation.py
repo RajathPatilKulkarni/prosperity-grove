@@ -1,5 +1,6 @@
 from backend.env.market_env import MarketEnvironment
 from backend.agents.random_agent import RandomAgent
+import statistics
 
 
 def run_episode(prices, seed=None):
@@ -28,17 +29,40 @@ def run_episode(prices, seed=None):
         "min_value": min(history),
     }
 
+    return episode_metrics
+
+
+def run_experiment(prices, n_episodes=10, seed_start=0):
+    results = []
+
+    for i in range(n_episodes):
+        metrics = run_episode(prices, seed=seed_start + i)
+        results.append(metrics)
+
+    final_values = [r["final_value"] for r in results]
+    rewards = [r["total_reward"] for r in results]
+
+    summary = {
+        "episodes": n_episodes,
+        "final_value_mean": statistics.mean(final_values),
+        "final_value_std": statistics.pstdev(final_values),
+        "reward_mean": statistics.mean(rewards),
+        "reward_std": statistics.pstdev(rewards),
+        "best_final_value": max(final_values),
+        "worst_final_value": min(final_values),
+    }
+
     return {
-        "metrics": episode_metrics,
-        "trajectory": history,
+        "summary": summary,
+        "episodes": results,
     }
 
 
 if __name__ == "__main__":
     prices = [100, 102, 101, 105, 107, 106, 108]
 
-    result = run_episode(prices, seed=42)
+    experiment = run_experiment(prices, n_episodes=20)
 
-    print("Episode metrics:")
-    for k, v in result["metrics"].items():
+    print("Experiment summary:")
+    for k, v in experiment["summary"].items():
         print(f"{k}: {v}")
