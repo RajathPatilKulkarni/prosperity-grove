@@ -1,3 +1,5 @@
+import numpy as np
+
 from backend.env.market_env import MarketEnvironment
 from backend.agents.random_agent import RandomAgent
 from backend.agents.rule_based_agent import RuleBasedAgent
@@ -7,6 +9,18 @@ from experiments.market_scenarios import SCENARIOS
 from experiments.experiment_config import ExperimentConfig
 
 
+# JSON-safe serializer (CRITICAL)
+def make_json_serializable(obj):
+    if isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [make_json_serializable(v) for v in obj]
+    if isinstance(obj, np.generic):
+        return obj.item()
+    return obj
+
+
+# Single episode (random / rule)
 def run_episode(prices, agent_type="random", seed=None):
     env = MarketEnvironment(prices)
 
@@ -30,13 +44,14 @@ def run_episode(prices, agent_type="random", seed=None):
         total_reward += reward
         history.append(state["portfolio_value"])
 
-    return {
+    return make_json_serializable({
         "final_value": history[-1],
         "total_reward": total_reward,
         "trajectory": history,
-    }
+    })
 
 
+# Multi-episode experiment
 def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
     results = []
 
@@ -44,7 +59,7 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
         metrics = run_episode(
             prices,
             agent_type=agent_type,
-            seed=seed_start + i
+            seed=seed_start + i,
         )
         results.append(metrics)
 
@@ -60,12 +75,13 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
         "worst_final_value": min(final_values),
     }
 
-    return {
+    return make_json_serializable({
         "summary": summary,
         "episodes": results,
-    }
+    })
 
 
+# PPO episode
 def run_ppo_episode(prices, timesteps=10_000):
     model = train_ppo(prices, timesteps=timesteps)
     env = RLMarketEnv(prices)
@@ -83,20 +99,20 @@ def run_ppo_episode(prices, timesteps=10_000):
         total_reward += reward
         history.append(obs[3])  # portfolio value
 
-    return {
+    return make_json_serializable({
         "final_value": history[-1],
         "total_reward": total_reward,
-    }
+        "trajectory": history,
+    })
 
 
+# Config-driven dispatcher
 def run_configured_experiment(config: ExperimentConfig):
-    # Get price series from scenario
     if config.scenario not in SCENARIOS:
         raise ValueError(f"Unknown market scenario: {config.scenario}")
 
     prices = SCENARIOS[config.scenario]()
 
-    # Dispatch based on agent type
     if config.agent_type == "ppo":
         return run_ppo_episode(prices, timesteps=config.timesteps)
 
@@ -107,6 +123,7 @@ def run_configured_experiment(config: ExperimentConfig):
     )
 
 
+# Local test runner
 if __name__ == "__main__":
     configs = [
         ExperimentConfig("bull", "random", episodes=20),
