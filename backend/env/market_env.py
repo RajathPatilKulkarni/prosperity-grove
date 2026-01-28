@@ -4,6 +4,10 @@ class MarketEnvironment:
     """
 
     def __init__(self, prices, initial_cash=10000, trade_size=1):
+        self.holdings = None
+        self.cash = None
+        self.done = None
+        self.timestep = None
         self.prices = prices
         self.initial_cash = initial_cash
         self.trade_size = trade_size
@@ -67,3 +71,4 @@ class MarketEnvironment:
             "holdings": self.holdings,
             "portfolio_value": self._portfolio_value(price),
         }
+    

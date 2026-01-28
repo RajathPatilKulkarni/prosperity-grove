@@ -1,5 +1,6 @@
 import random
 
+
 class RandomAgent:
     """
     Baseline agent that selects actions uniformly at random.

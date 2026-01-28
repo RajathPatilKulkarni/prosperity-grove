@@ -11,6 +11,13 @@ class MultiAssetMarketEnvironment:
         price_matrix: list of lists
             shape = (num_assets, timesteps)
         """
+        self.prev_prices = None
+        self.trade_count = None
+        self.holdings = None
+        self.done = None
+        self.cash = None
+        self.timestep = None
+        self.max_portfolio_value = None
         self.price_matrix = price_matrix
         self.num_assets = len(price_matrix)
         self.timesteps = len(price_matrix[0])
@@ -113,3 +120,4 @@ class MultiAssetMarketEnvironment:
         state.append(self.cash)
         state.append(self._portfolio_value())
         return state
+    

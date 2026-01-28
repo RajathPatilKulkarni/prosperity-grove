@@ -24,7 +24,8 @@ class RLMarketEnv(gym.Env):
             dtype=np.float32,
         )
 
-    def _state_to_array(self, state):
+    @staticmethod
+    def _state_to_array(state):
         return np.array(
             [
                 state["price"],
