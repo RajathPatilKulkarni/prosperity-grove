@@ -2,6 +2,9 @@ from backend.env.market_env import MarketEnvironment
 from backend.agents.random_agent import RandomAgent
 from backend.agents.rule_based_agent import RuleBasedAgent
 from backend.agents.ppo_agent import train_ppo
+from backend.env.rl_env import RLMarketEnv
+from experiments.market_scenarios import SCENARIOS
+from experiments.experiment_config import ExperimentConfig
 
 
 def run_episode(prices, agent_type="random", seed=None):
@@ -63,9 +66,6 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
     }
 
 
-from backend.env.rl_env import RLMarketEnv
-
-
 def run_ppo_episode(prices, timesteps=10_000):
     model = train_ppo(prices, timesteps=timesteps)
     env = RLMarketEnv(prices)
@@ -89,13 +89,37 @@ def run_ppo_episode(prices, timesteps=10_000):
     }
 
 
+def run_configured_experiment(config: ExperimentConfig):
+    # Get price series from scenario
+    if config.scenario not in SCENARIOS:
+        raise ValueError(f"Unknown market scenario: {config.scenario}")
+
+    prices = SCENARIOS[config.scenario]()
+
+    # Dispatch based on agent type
+    if config.agent_type == "ppo":
+        return run_ppo_episode(prices, timesteps=config.timesteps)
+
+    return run_experiment(
+        prices,
+        agent_type=config.agent_type,
+        n_episodes=config.episodes,
+    )
+
+
 if __name__ == "__main__":
-    prices = [100, 102, 101, 105, 107, 106, 108, 110, 108, 112]
+    configs = [
+        ExperimentConfig("bull", "random", episodes=20),
+        ExperimentConfig("bull", "rule_based", episodes=1),
+        ExperimentConfig("bull", "ppo", timesteps=15_000),
 
-    random_exp = run_experiment(prices, agent_type="random", n_episodes=20)
-    rule_exp = run_experiment(prices, agent_type="rule_based", n_episodes=1)
-    ppo_result = run_ppo_episode(prices, timesteps=15_000)
+        ExperimentConfig("bear", "random", episodes=20),
+        ExperimentConfig("bear", "ppo", timesteps=15_000),
 
-    print("Random agent:", random_exp["summary"])
-    print("Rule-based agent:", rule_exp["summary"])
-    print("PPO agent:", ppo_result)
+        ExperimentConfig("volatile", "ppo", timesteps=15_000),
+    ]
+
+    for cfg in configs:
+        print("\nRunning:", cfg)
+        result = run_configured_experiment(cfg)
+        print(result)
