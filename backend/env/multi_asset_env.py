@@ -1,6 +1,7 @@
 class MultiAssetMarketEnvironment:
     """
-    Multi-asset financial environment for portfolio allocation.
+    Multi-asset financial environment with
+    risk-aware and behavioral reward shaping.
     """
 
     ACTION_HOLD = 0
@@ -17,10 +18,10 @@ class MultiAssetMarketEnvironment:
         self.initial_cash = initial_cash
         self.trade_size = trade_size
 
-        # action space: HOLD + (BUY, SELL) per asset
+        # Action space: HOLD + (BUY, SELL) per asset
         self.action_space_size = 1 + 2 * self.num_assets
 
-        # state: prices + holdings + cash + portfolio_value
+        # State: (price_i, holding_i) * N + cash + portfolio_value
         self.state_dim = 2 * self.num_assets + 2
 
         self.reset()
@@ -30,6 +31,14 @@ class MultiAssetMarketEnvironment:
         self.cash = self.initial_cash
         self.holdings = [0 for _ in range(self.num_assets)]
         self.done = False
+
+        # --- Risk & behavior tracking ---
+        self.max_portfolio_value = self.initial_cash
+        self.trade_count = 0
+        self.prev_prices = [
+            self.price_matrix[i][0] for i in range(self.num_assets)
+        ]
+
         return self._get_state()
 
     def step(self, action):
@@ -38,8 +47,10 @@ class MultiAssetMarketEnvironment:
 
         prev_value = self._portfolio_value()
 
-        # Decode action
+        # --- Decode action ---
         if action != self.ACTION_HOLD:
+            self.trade_count += 1
+
             asset_id = (action - 1) // 2
             is_buy = (action - 1) % 2 == 0
 
@@ -55,12 +66,35 @@ class MultiAssetMarketEnvironment:
                     self.cash += price * self.trade_size
                     self.holdings[asset_id] -= self.trade_size
 
-        # Advance time
+        # --- Advance time ---
         self.timestep += 1
         if self.timestep >= self.timesteps - 1:
             self.done = True
 
-        reward = self._portfolio_value() - prev_value
+        # --- Portfolio update ---
+        current_value = self._portfolio_value()
+        self.max_portfolio_value = max(
+            self.max_portfolio_value, current_value
+        )
+
+        # --- Risk penalties ---
+        drawdown = self.max_portfolio_value - current_value
+        trade_penalty = self.trade_count * 0.1
+
+        volatility = 0.0
+        for i in range(self.num_assets):
+            price = self.price_matrix[i][self.timestep]
+            volatility += abs(price - self.prev_prices[i])
+            self.prev_prices[i] = price
+
+        # --- Final reward ---
+        reward = (
+            current_value - prev_value
+            - 0.01 * drawdown
+            - trade_penalty
+            - 0.01 * volatility
+        )
+
         return self._get_state(), reward, self.done
 
     def _portfolio_value(self):
