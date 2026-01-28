@@ -1,8 +1,7 @@
 from backend.env.market_env import MarketEnvironment
 from backend.agents.random_agent import RandomAgent
 from backend.agents.rule_based_agent import RuleBasedAgent
-import statistics
-
+from backend.agents.ppo_agent import train_ppo
 
 
 def run_episode(prices, agent_type="random", seed=None):
@@ -64,11 +63,39 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
     }
 
 
+from backend.env.rl_env import RLMarketEnv
+
+
+def run_ppo_episode(prices, timesteps=10_000):
+    model = train_ppo(prices, timesteps=timesteps)
+    env = RLMarketEnv(prices)
+
+    obs, _ = env.reset()
+    done = False
+    total_reward = 0.0
+    history = []
+
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, terminated, truncated, _ = env.step(action)
+
+        done = terminated or truncated
+        total_reward += reward
+        history.append(obs[3])  # portfolio value
+
+    return {
+        "final_value": history[-1],
+        "total_reward": total_reward,
+    }
+
+
 if __name__ == "__main__":
-    prices = [100, 102, 101, 105, 107, 106, 108]
+    prices = [100, 102, 101, 105, 107, 106, 108, 110, 108, 112]
 
     random_exp = run_experiment(prices, agent_type="random", n_episodes=20)
     rule_exp = run_experiment(prices, agent_type="rule_based", n_episodes=1)
+    ppo_result = run_ppo_episode(prices, timesteps=15_000)
 
-    print("Random agent summary:", random_exp["summary"])
-    print("Rule-based agent summary:", rule_exp["summary"])
+    print("Random agent:", random_exp["summary"])
+    print("Rule-based agent:", rule_exp["summary"])
+    print("PPO agent:", ppo_result)

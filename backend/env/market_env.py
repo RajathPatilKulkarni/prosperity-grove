@@ -7,6 +7,7 @@ class MarketEnvironment:
         self.prices = prices
         self.initial_cash = initial_cash
         self.trade_size = trade_size
+        self.state_dim = 4
         self.reset()
 
     def reset(self):

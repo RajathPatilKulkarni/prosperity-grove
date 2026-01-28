@@ -2,3 +2,6 @@ fastapi
 uvicorn
 numpy
 pandas
+stable-baselines3
+gymnasium
+torch
