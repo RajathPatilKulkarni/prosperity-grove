@@ -18,3 +18,9 @@ measure robustness and risk-adjusted performance.
 ## Example Schedules
 - `regime_shift_short`: bull -> volatile -> bear
 - `regime_shift_long`: bull -> sideways -> volatile -> bear
+
+## Runner
+Use the benchmark runner to export CSV for analysis:
+```
+python3 -m backend.simulations.run_benchmark --episodes 20 --timesteps 10000
+```
