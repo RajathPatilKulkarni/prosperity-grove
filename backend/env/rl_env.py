@@ -11,9 +11,9 @@ class RLMarketEnv(gym.Env):
 
     metadata = {"render.modes": []}
 
-    def __init__(self, prices):
+    def __init__(self, prices, reward_mode="raw"):
         super().__init__()
-        self.env = MarketEnvironment(prices)
+        self.env = MarketEnvironment(prices, reward_mode=reward_mode)
 
         self.action_space = spaces.Discrete(3)
 

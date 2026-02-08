@@ -24,6 +24,9 @@ def run_experiment_api(request: ExperimentRequest):
             agent_type=request.agent_type,
             episodes=request.episodes,
             timesteps=request.timesteps,
+            reward_mode=request.reward_mode,
+            schedule=request.schedule,
+            schedule_length=request.schedule_length,
         )
 
         result = run_configured_experiment(config)

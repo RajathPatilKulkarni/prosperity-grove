@@ -2,8 +2,8 @@ from stable_baselines3 import PPO
 from backend.env.rl_env import RLMarketEnv
 
 
-def train_ppo(prices, timesteps=10_000):
-    env = RLMarketEnv(prices)
+def train_ppo(prices, timesteps=10_000, reward_mode="raw"):
+    env = RLMarketEnv(prices, reward_mode=reward_mode)
 
     model = PPO(
         policy="MlpPolicy",

@@ -5,8 +5,15 @@ from backend.agents.random_agent import RandomAgent
 from backend.agents.rule_based_agent import RuleBasedAgent
 from backend.agents.ppo_agent import train_ppo
 from backend.env.rl_env import RLMarketEnv
-from experiments.market_scenarios import SCENARIOS
+from experiments.market_scenarios import SCENARIOS, regime_schedule
 from experiments.experiment_config import ExperimentConfig
+from backend.simulations.metrics import (
+    compute_returns,
+    max_drawdown,
+    volatility,
+    sharpe_ratio,
+    turnover,
+)
 
 
 # JSON-safe serializer (CRITICAL)
@@ -21,8 +28,8 @@ def make_json_serializable(obj):
 
 
 # Single episode (random / rule)
-def run_episode(prices, agent_type="random", seed=None):
-    env = MarketEnvironment(prices)
+def run_episode(prices, agent_type="random", seed=None, reward_mode="raw"):
+    env = MarketEnvironment(prices, reward_mode=reward_mode)
 
     if agent_type == "random":
         agent = RandomAgent(seed=seed)
@@ -36,6 +43,7 @@ def run_episode(prices, agent_type="random", seed=None):
 
     total_reward = 0.0
     history = []
+    actions = []
 
     while not done:
         action = agent.act(state)
@@ -43,16 +51,33 @@ def run_episode(prices, agent_type="random", seed=None):
 
         total_reward += reward
         history.append(state["portfolio_value"])
+        actions.append(action)
 
-    return make_json_serializable({
+    returns = compute_returns(history)
+    metrics = {
         "final_value": history[-1],
         "total_reward": total_reward,
+        "max_drawdown": max_drawdown(history),
+        "volatility": volatility(returns),
+        "sharpe": sharpe_ratio(returns),
+        "turnover": turnover(actions),
+    }
+
+    return make_json_serializable({
+        "metrics": metrics,
         "trajectory": history,
+        "actions": actions,
     })
 
 
 # Multi-episode experiment
-def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
+def run_experiment(
+    prices,
+    agent_type="random",
+    n_episodes=10,
+    seed_start=0,
+    reward_mode="raw",
+):
     results = []
 
     for i in range(n_episodes):
@@ -60,11 +85,16 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
             prices,
             agent_type=agent_type,
             seed=seed_start + i,
+            reward_mode=reward_mode,
         )
         results.append(metrics)
 
-    final_values = [r["final_value"] for r in results]
-    rewards = [r["total_reward"] for r in results]
+    final_values = [r["metrics"]["final_value"] for r in results]
+    rewards = [r["metrics"]["total_reward"] for r in results]
+    drawdowns = [r["metrics"]["max_drawdown"] for r in results]
+    vols = [r["metrics"]["volatility"] for r in results]
+    sharpes = [r["metrics"]["sharpe"] for r in results]
+    turnovers = [r["metrics"]["turnover"] for r in results]
 
     summary = {
         "agent": agent_type,
@@ -73,6 +103,11 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
         "reward_mean": sum(rewards) / len(rewards),
         "best_final_value": max(final_values),
         "worst_final_value": min(final_values),
+        "max_drawdown_mean": sum(drawdowns) / len(drawdowns),
+        "volatility_mean": sum(vols) / len(vols),
+        "sharpe_mean": sum(sharpes) / len(sharpes),
+        "turnover_mean": sum(turnovers) / len(turnovers),
+        "reward_mode": reward_mode,
     }
 
     return make_json_serializable({
@@ -82,14 +117,15 @@ def run_experiment(prices, agent_type="random", n_episodes=10, seed_start=0):
 
 
 # PPO episode
-def run_ppo_episode(prices, timesteps=10_000):
-    model = train_ppo(prices, timesteps=timesteps)
-    env = RLMarketEnv(prices)
+def run_ppo_episode(prices, timesteps=10_000, reward_mode="raw"):
+    model = train_ppo(prices, timesteps=timesteps, reward_mode=reward_mode)
+    env = RLMarketEnv(prices, reward_mode=reward_mode)
 
     obs, _ = env.reset()
     done = False
     total_reward = 0.0
     history = []
+    actions = []
 
     while not done:
         action, _ = model.predict(obs, deterministic=True)
@@ -98,28 +134,48 @@ def run_ppo_episode(prices, timesteps=10_000):
         done = terminated or truncated
         total_reward += reward
         history.append(obs[3])  # portfolio value
+        actions.append(int(action))
 
-    return make_json_serializable({
+    returns = compute_returns(history)
+    metrics = {
         "final_value": history[-1],
         "total_reward": total_reward,
+        "max_drawdown": max_drawdown(history),
+        "volatility": volatility(returns),
+        "sharpe": sharpe_ratio(returns),
+        "turnover": turnover(actions),
+    }
+
+    return make_json_serializable({
+        "metrics": metrics,
         "trajectory": history,
+        "actions": actions,
     })
 
 
 # Config-driven dispatcher
 def run_configured_experiment(config: ExperimentConfig):
-    if config.scenario not in SCENARIOS:
-        raise ValueError(f"Unknown market scenario: {config.scenario}")
-
-    prices = SCENARIOS[config.scenario]()
+    if config.schedule:
+        prices = regime_schedule(
+            config.schedule, length=config.schedule_length
+        )
+    else:
+        if config.scenario not in SCENARIOS:
+            raise ValueError(f"Unknown market scenario: {config.scenario}")
+        prices = SCENARIOS[config.scenario]()
 
     if config.agent_type == "ppo":
-        return run_ppo_episode(prices, timesteps=config.timesteps)
+        return run_ppo_episode(
+            prices,
+            timesteps=config.timesteps,
+            reward_mode=config.reward_mode,
+        )
 
     return run_experiment(
         prices,
         agent_type=config.agent_type,
         n_episodes=config.episodes,
+        reward_mode=config.reward_mode,
     )
 
 
@@ -134,6 +190,12 @@ if __name__ == "__main__":
         ExperimentConfig("bear", "ppo", timesteps=15_000),
 
         ExperimentConfig("volatile", "ppo", timesteps=15_000),
+        ExperimentConfig(
+            "regime_shift_short",
+            "ppo",
+            timesteps=15_000,
+            reward_mode="risk_adjusted",
+        ),
     ]
 
     for cfg in configs:

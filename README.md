@@ -7,4 +7,8 @@ This repository contains:
 - Reinforcement learning agents
 - A web-based visualization interface
 
+Recent additions:
+- Regime-shift robustness benchmark (see docs/benchmark.md)
+- Risk-adjusted reward mode for drawdown/volatility-aware training
+
 Work in progress.
