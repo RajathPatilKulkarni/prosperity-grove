@@ -11,9 +11,26 @@ class RLMarketEnv(gym.Env):
 
     metadata = {"render.modes": []}
 
-    def __init__(self, prices, reward_mode="raw"):
+    def __init__(
+        self,
+        prices,
+        reward_mode="raw",
+        drawdown_coeff=0.01,
+        volatility_coeff=0.01,
+        trade_penalty_coeff=0.0,
+        invalid_action_penalty=0.0,
+        inactivity_penalty=0.0,
+    ):
         super().__init__()
-        self.env = MarketEnvironment(prices, reward_mode=reward_mode)
+        self.env = MarketEnvironment(
+            prices,
+            reward_mode=reward_mode,
+            drawdown_coeff=drawdown_coeff,
+            volatility_coeff=volatility_coeff,
+            trade_penalty_coeff=trade_penalty_coeff,
+            invalid_action_penalty=invalid_action_penalty,
+            inactivity_penalty=inactivity_penalty,
+        )
 
         self.action_space = spaces.Discrete(3)
 

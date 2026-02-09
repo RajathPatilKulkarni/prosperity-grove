@@ -78,6 +78,53 @@ def parse_args():
         help="Per-regime length for custom schedule.",
     )
     parser.add_argument(
+        "--drawdown-coeff",
+        type=float,
+        default=0.01,
+        help="Drawdown penalty coefficient for risk-adjusted reward.",
+    )
+    parser.add_argument(
+        "--volatility-coeff",
+        type=float,
+        default=0.01,
+        help="Volatility penalty coefficient for risk-adjusted reward.",
+    )
+    parser.add_argument(
+        "--trade-penalty-coeff",
+        type=float,
+        default=0.0,
+        help="Trade penalty coefficient for risk-adjusted reward.",
+    )
+    parser.add_argument(
+        "--invalid-action-penalty",
+        type=float,
+        default=0.0,
+        help="Penalty for invalid actions (e.g., sell with no holdings).",
+    )
+    parser.add_argument(
+        "--inactivity-penalty",
+        type=float,
+        default=0.0,
+        help="Penalty for not executing a trade in a step.",
+    )
+    parser.add_argument(
+        "--entropy-coef",
+        type=float,
+        default=0.0,
+        help="PPO entropy coefficient (encourages exploration).",
+    )
+    parser.add_argument(
+        "--ppo-progress",
+        action="store_true",
+        help="Print PPO training progress.",
+    )
+    parser.add_argument(
+        "--ppo-log-every",
+        type=int,
+        default=5000,
+        help="Steps between PPO progress logs.",
+    )
+    parser.add_argument(
         "--out",
         type=str,
         default="experiments/results/benchmark_results.csv",
@@ -129,6 +176,10 @@ def run_benchmark():
         "volatility",
         "sharpe",
         "turnover",
+        "action_hold_ratio",
+        "action_buy_ratio",
+        "action_sell_ratio",
+        "executed_trade_ratio",
     ]
 
     with open(out_path, "w", newline="") as f:
@@ -144,11 +195,19 @@ def run_benchmark():
                 for agent in agents:
                     if agent == "ppo":
                         for i in range(args.ppo_repeats):
-                            result = run_ppo_episode(
-                                prices,
-                                timesteps=args.timesteps,
-                                reward_mode=reward_mode,
-                            )
+                        result = run_ppo_episode(
+                            prices,
+                            timesteps=args.timesteps,
+                            reward_mode=reward_mode,
+                            drawdown_coeff=args.drawdown_coeff,
+                            volatility_coeff=args.volatility_coeff,
+                            trade_penalty_coeff=args.trade_penalty_coeff,
+                            invalid_action_penalty=args.invalid_action_penalty,
+                            inactivity_penalty=args.inactivity_penalty,
+                            entropy_coef=args.entropy_coef,
+                            progress=args.ppo_progress,
+                            log_every=args.ppo_log_every,
+                        )
                             metrics = result["metrics"]
                             base = {
                                 "scenario": scenario_label,
@@ -164,6 +223,11 @@ def run_benchmark():
                             n_episodes=args.episodes,
                             seed_start=args.seed_start,
                             reward_mode=reward_mode,
+                            drawdown_coeff=args.drawdown_coeff,
+                            volatility_coeff=args.volatility_coeff,
+                            trade_penalty_coeff=args.trade_penalty_coeff,
+                            invalid_action_penalty=args.invalid_action_penalty,
+                            inactivity_penalty=args.inactivity_penalty,
                         )
                         for i, episode in enumerate(result["episodes"]):
                             metrics = episode["metrics"]

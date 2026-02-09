@@ -28,8 +28,26 @@ def make_json_serializable(obj):
 
 
 # Single episode (random / rule)
-def run_episode(prices, agent_type="random", seed=None, reward_mode="raw"):
-    env = MarketEnvironment(prices, reward_mode=reward_mode)
+def run_episode(
+    prices,
+    agent_type="random",
+    seed=None,
+    reward_mode="raw",
+    drawdown_coeff=0.01,
+    volatility_coeff=0.01,
+    trade_penalty_coeff=0.0,
+    invalid_action_penalty=0.0,
+    inactivity_penalty=0.0,
+):
+    env = MarketEnvironment(
+        prices,
+        reward_mode=reward_mode,
+        drawdown_coeff=drawdown_coeff,
+        volatility_coeff=volatility_coeff,
+        trade_penalty_coeff=trade_penalty_coeff,
+        invalid_action_penalty=invalid_action_penalty,
+        inactivity_penalty=inactivity_penalty,
+    )
 
     if agent_type == "random":
         agent = RandomAgent(seed=seed)
@@ -54,14 +72,22 @@ def run_episode(prices, agent_type="random", seed=None, reward_mode="raw"):
         actions.append(action)
 
     returns = compute_returns(history)
+    total_actions = max(1, len(actions))
+    action_counts = {
+        "action_hold_ratio": actions.count(0) / total_actions,
+        "action_buy_ratio": actions.count(1) / total_actions,
+        "action_sell_ratio": actions.count(2) / total_actions,
+        "executed_trade_ratio": env.executed_trades / total_actions,
+    }
     metrics = {
         "final_value": history[-1],
         "total_reward": total_reward,
         "max_drawdown": max_drawdown(history),
         "volatility": volatility(returns),
         "sharpe": sharpe_ratio(returns),
-        "turnover": turnover(actions),
+        "turnover": turnover(env.executed_trades, len(actions)),
     }
+    metrics.update(action_counts)
 
     return make_json_serializable({
         "metrics": metrics,
@@ -77,6 +103,11 @@ def run_experiment(
     n_episodes=10,
     seed_start=0,
     reward_mode="raw",
+    drawdown_coeff=0.01,
+    volatility_coeff=0.01,
+    trade_penalty_coeff=0.0,
+    invalid_action_penalty=0.0,
+    inactivity_penalty=0.0,
 ):
     results = []
 
@@ -86,6 +117,11 @@ def run_experiment(
             agent_type=agent_type,
             seed=seed_start + i,
             reward_mode=reward_mode,
+            drawdown_coeff=drawdown_coeff,
+            volatility_coeff=volatility_coeff,
+            trade_penalty_coeff=trade_penalty_coeff,
+            invalid_action_penalty=invalid_action_penalty,
+            inactivity_penalty=inactivity_penalty,
         )
         results.append(metrics)
 
@@ -117,9 +153,43 @@ def run_experiment(
 
 
 # PPO episode
-def run_ppo_episode(prices, timesteps=10_000, reward_mode="raw"):
-    model = train_ppo(prices, timesteps=timesteps, reward_mode=reward_mode)
-    env = RLMarketEnv(prices, reward_mode=reward_mode)
+def run_ppo_episode(
+    prices,
+    timesteps=10_000,
+    reward_mode="raw",
+    drawdown_coeff=0.01,
+    volatility_coeff=0.01,
+    trade_penalty_coeff=0.0,
+    invalid_action_penalty=0.0,
+    inactivity_penalty=0.0,
+    entropy_coef=0.0,
+    progress=False,
+    log_every=5000,
+    progress_label="PPO",
+):
+    model = train_ppo(
+        prices,
+        timesteps=timesteps,
+        reward_mode=reward_mode,
+        drawdown_coeff=drawdown_coeff,
+        volatility_coeff=volatility_coeff,
+        trade_penalty_coeff=trade_penalty_coeff,
+        invalid_action_penalty=invalid_action_penalty,
+        inactivity_penalty=inactivity_penalty,
+        entropy_coef=entropy_coef,
+        progress=progress,
+        log_every=log_every,
+        progress_label=progress_label,
+    )
+    env = RLMarketEnv(
+        prices,
+        reward_mode=reward_mode,
+        drawdown_coeff=drawdown_coeff,
+        volatility_coeff=volatility_coeff,
+        trade_penalty_coeff=trade_penalty_coeff,
+        invalid_action_penalty=invalid_action_penalty,
+        inactivity_penalty=inactivity_penalty,
+    )
 
     obs, _ = env.reset()
     done = False
@@ -137,14 +207,22 @@ def run_ppo_episode(prices, timesteps=10_000, reward_mode="raw"):
         actions.append(int(action))
 
     returns = compute_returns(history)
+    total_actions = max(1, len(actions))
+    action_counts = {
+        "action_hold_ratio": actions.count(0) / total_actions,
+        "action_buy_ratio": actions.count(1) / total_actions,
+        "action_sell_ratio": actions.count(2) / total_actions,
+        "executed_trade_ratio": env.env.executed_trades / total_actions,
+    }
     metrics = {
         "final_value": history[-1],
         "total_reward": total_reward,
         "max_drawdown": max_drawdown(history),
         "volatility": volatility(returns),
         "sharpe": sharpe_ratio(returns),
-        "turnover": turnover(actions),
+        "turnover": turnover(env.env.executed_trades, len(actions)),
     }
+    metrics.update(action_counts)
 
     return make_json_serializable({
         "metrics": metrics,
@@ -169,6 +247,11 @@ def run_configured_experiment(config: ExperimentConfig):
             prices,
             timesteps=config.timesteps,
             reward_mode=config.reward_mode,
+            drawdown_coeff=config.drawdown_coeff,
+            volatility_coeff=config.volatility_coeff,
+            trade_penalty_coeff=config.trade_penalty_coeff,
+            invalid_action_penalty=config.invalid_action_penalty,
+            inactivity_penalty=config.inactivity_penalty,
         )
 
     return run_experiment(
@@ -176,6 +259,11 @@ def run_configured_experiment(config: ExperimentConfig):
         agent_type=config.agent_type,
         n_episodes=config.episodes,
         reward_mode=config.reward_mode,
+        drawdown_coeff=config.drawdown_coeff,
+        volatility_coeff=config.volatility_coeff,
+        trade_penalty_coeff=config.trade_penalty_coeff,
+        invalid_action_penalty=config.invalid_action_penalty,
+        inactivity_penalty=config.inactivity_penalty,
     )
 
 

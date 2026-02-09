@@ -12,6 +12,8 @@ class MarketEnvironment:
         drawdown_coeff=0.01,
         volatility_coeff=0.01,
         trade_penalty_coeff=0.0,
+        invalid_action_penalty=0.0,
+        inactivity_penalty=0.0,
     ):
         self.holdings = None
         self.cash = None
@@ -25,10 +27,13 @@ class MarketEnvironment:
         self.drawdown_coeff = drawdown_coeff
         self.volatility_coeff = volatility_coeff
         self.trade_penalty_coeff = trade_penalty_coeff
+        self.invalid_action_penalty = invalid_action_penalty
+        self.inactivity_penalty = inactivity_penalty
 
         self.max_portfolio_value = None
         self.prev_price = None
         self.trade_count = None
+        self.executed_trades = None
         self.reset()
 
     def reset(self):
@@ -39,6 +44,7 @@ class MarketEnvironment:
         self.max_portfolio_value = self.initial_cash
         self.prev_price = self.prices[0]
         self.trade_count = 0
+        self.executed_trades = 0
         return self._get_state()
 
     def step(self, action):
@@ -56,18 +62,23 @@ class MarketEnvironment:
 
         # Execute action
         traded = False
+        invalid_action = False
         if action == 1:  # BUY
             cost = current_price * self.trade_size
             if self.cash >= cost:
                 self.cash -= cost
                 self.holdings += self.trade_size
                 traded = True
+            else:
+                invalid_action = True
 
         elif action == 2:  # SELL
             if self.holdings >= self.trade_size:
                 self.cash += current_price * self.trade_size
                 self.holdings -= self.trade_size
                 traded = True
+            else:
+                invalid_action = True
 
         # Move to next timestep
         self.timestep += 1
@@ -80,6 +91,13 @@ class MarketEnvironment:
         raw_reward = current_value - prev_value
         self.max_portfolio_value = max(self.max_portfolio_value, current_value)
 
+        inactivity_penalty = (
+            self.inactivity_penalty if not traded else 0.0
+        )
+        invalid_penalty = (
+            self.invalid_action_penalty if invalid_action else 0.0
+        )
+
         if self.reward_mode == "risk_adjusted":
             drawdown = self.max_portfolio_value - current_value
             volatility = abs(next_price - current_price)
@@ -91,12 +109,15 @@ class MarketEnvironment:
                 - self.drawdown_coeff * drawdown
                 - self.volatility_coeff * volatility
                 - trade_penalty
+                - invalid_penalty
+                - inactivity_penalty
             )
         else:
-            reward = raw_reward
+            reward = raw_reward - invalid_penalty - inactivity_penalty
 
         if traded:
             self.trade_count += 1
+            self.executed_trades += 1
         self.prev_price = next_price
         state = self._get_state()
 

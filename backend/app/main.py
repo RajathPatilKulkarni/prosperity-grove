@@ -27,6 +27,11 @@ def run_experiment_api(request: ExperimentRequest):
             reward_mode=request.reward_mode,
             schedule=request.schedule,
             schedule_length=request.schedule_length,
+            drawdown_coeff=request.drawdown_coeff,
+            volatility_coeff=request.volatility_coeff,
+            trade_penalty_coeff=request.trade_penalty_coeff,
+            invalid_action_penalty=request.invalid_action_penalty,
+            inactivity_penalty=request.inactivity_penalty,
         )
 
         result = run_configured_experiment(config)

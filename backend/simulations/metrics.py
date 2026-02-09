@@ -38,8 +38,21 @@ def sharpe_ratio(returns):
     return float(np.mean(returns) / vol * np.sqrt(len(returns)))
 
 
-def turnover(actions):
-    if not actions:
+def turnover(executed_trades, total_steps):
+    if total_steps <= 0:
         return 0.0
-    trades = sum(1 for a in actions if a != 0)
-    return trades / len(actions)
+    return executed_trades / total_steps
+
+
+METRICS = [
+    "final_value",
+    "total_reward",
+    "max_drawdown",
+    "volatility",
+    "sharpe",
+    "turnover",
+    "action_hold_ratio",
+    "action_buy_ratio",
+    "action_sell_ratio",
+    "executed_trade_ratio",
+]
