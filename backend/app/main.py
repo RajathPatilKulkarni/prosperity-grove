@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import json
@@ -59,6 +59,11 @@ def run_experiment_api(request: ExperimentRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@app.options("/run-experiment")
+def run_experiment_options():
+    return Response(status_code=204)
+
+
 @app.post("/run-experiment/stream")
 def run_experiment_stream(request: ExperimentRequest):
     event_queue = queue.Queue()
@@ -112,3 +117,8 @@ def run_experiment_stream(request: ExperimentRequest):
             yield f"{json.dumps(event)}\n"
 
     return StreamingResponse(stream(), media_type="application/x-ndjson")
+
+
+@app.options("/run-experiment/stream")
+def run_experiment_stream_options():
+    return Response(status_code=204)
