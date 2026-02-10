@@ -1,5 +1,12 @@
 # Prosperity Grove
 
+[![UI](https://img.shields.io/badge/UI-Netlify-00C7B7?logo=netlify&logoColor=white)](https://prosperity-grove.netlify.app)
+[![API](https://img.shields.io/badge/API-Render-46E3B7?logo=render&logoColor=white)](https://prosperity-grove.onrender.com)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
 Prosperity Grove is an AI-powered financial decision-making simulator focused on long-term wealth behavior and risk dynamics. It combines a market simulator, baseline agents, PPO training, and a console-style UI for running and inspecting experiments.
 
 **Core Objectives**
@@ -91,6 +98,50 @@ flowchart LR
   SUM --> OUT["benchmark_summary.csv"]
   OUT --> PLOT["plot_results.py"]
   OUT --> TABLE["report_results.py"]
+```
+
+**Visual System Maps (Unique)**
+```mermaid
+flowchart TB
+  classDef console fill:#0b120e,stroke:#39ff88,color:#b6ffd6,stroke-width:1.5px;
+  classDef engine fill:#0b0f0d,stroke:#6fe3a1,color:#b6ffd6;
+  classDef data fill:#060807,stroke:#7fcfa1,color:#b6ffd6;
+
+  UI["Research Console"]:::console
+  CTRL["Experiment Control"]:::console
+  LOGS["Execution Log"]:::console
+  METRICS["Metrics + Charts"]:::console
+
+  API["FastAPI Stream"]:::engine
+  SIM["Simulation Engine"]:::engine
+  ENV["Market Regimes"]:::engine
+  AGENT["Agents (Random / Rule / PPO)"]:::engine
+
+  DATA["Results Store"]:::data
+  REPORT["Report + Plots"]:::data
+
+  UI --> CTRL --> API
+  API --> SIM --> ENV
+  SIM --> AGENT --> SIM
+  SIM --> DATA --> REPORT --> UI
+  API --> LOGS
+  API --> METRICS
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> Configure
+  Configure --> Validate
+  Validate --> Run
+  Run --> Stream
+  Stream --> Render
+  Render --> Complete
+  Complete --> [*]
+
+  state Run {
+    [*] --> "Reward (Raw)"
+    "Reward (Raw)" --> "Reward (Risk Adjusted)"
+  }
 ```
 
 **Benchmarking**
