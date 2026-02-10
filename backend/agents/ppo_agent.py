@@ -31,6 +31,7 @@ def train_ppo(
     trade_penalty_coeff=0.0,
     invalid_action_penalty=0.0,
     inactivity_penalty=0.0,
+    trade_size=1,
     entropy_coef=0.0,
     progress=False,
     log_every=5000,
@@ -44,6 +45,7 @@ def train_ppo(
         trade_penalty_coeff=trade_penalty_coeff,
         invalid_action_penalty=invalid_action_penalty,
         inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
     )
 
     model = PPO(

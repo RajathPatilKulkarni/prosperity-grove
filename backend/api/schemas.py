@@ -15,6 +15,7 @@ class ExperimentRequest(BaseModel):
     trade_penalty_coeff: float = 0.0
     invalid_action_penalty: float = 0.0
     inactivity_penalty: float = 0.0
+    trade_size: int = 1
 
 
 class ExperimentResponse(BaseModel):

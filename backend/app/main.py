@@ -32,6 +32,7 @@ def run_experiment_api(request: ExperimentRequest):
             trade_penalty_coeff=request.trade_penalty_coeff,
             invalid_action_penalty=request.invalid_action_penalty,
             inactivity_penalty=request.inactivity_penalty,
+            trade_size=request.trade_size,
         )
 
         result = run_configured_experiment(config)

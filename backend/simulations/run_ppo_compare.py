@@ -61,20 +61,26 @@ def parse_args():
     parser.add_argument(
         "--invalid-action-penalty",
         type=float,
-        default=0.0,
+        default=0.5,
         help="Penalty for invalid actions (e.g., sell with no holdings).",
     )
     parser.add_argument(
         "--inactivity-penalty",
         type=float,
-        default=0.0,
+        default=0.02,
         help="Penalty for not executing a trade in a step.",
     )
     parser.add_argument(
         "--entropy-coef",
         type=float,
-        default=0.0,
+        default=0.05,
         help="PPO entropy coefficient (encourages exploration).",
+    )
+    parser.add_argument(
+        "--trade-size",
+        type=int,
+        default=1,
+        help="Units per trade (increases action impact).",
     )
     parser.add_argument(
         "--progress",
@@ -152,6 +158,7 @@ def main():
                     invalid_action_penalty=args.invalid_action_penalty,
                     inactivity_penalty=args.inactivity_penalty,
                     entropy_coef=args.entropy_coef,
+                    trade_size=args.trade_size,
                     progress=args.progress,
                     log_every=args.log_every,
                     progress_label=label,

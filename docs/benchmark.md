@@ -25,6 +25,12 @@ Use the benchmark runner to export CSV for analysis:
 python3 -m backend.simulations.run_benchmark --episodes 20 --timesteps 10000
 ```
 
+Include the buy-and-hold baseline:
+```
+python3 -m backend.simulations.run_benchmark \
+  --agents random,rule_based,buy_and_hold,ppo
+```
+
 You can increase reward shaping strength:
 ```
 python3 -m backend.simulations.run_benchmark \
@@ -48,6 +54,23 @@ Encourage exploration (PPO entropy):
 python3 -m backend.simulations.run_benchmark \
   --entropy-coef 0.01
 ```
+
+Increase trade impact:
+```
+python3 -m backend.simulations.run_benchmark \
+  --trade-size 50
+```
+
+## Recommended defaults (fast improvement)
+These flags tend to produce non-degenerate behavior quickly:
+```
+python3 -m backend.simulations.run_benchmark \
+  --drawdown-coeff 0.02 --volatility-coeff 0.02 \
+  --invalid-action-penalty 0.5 \
+  --inactivity-penalty 0.02 \
+  --entropy-coef 0.05 \
+  --trade-size 50
+```
 ## Summaries + Plot
 Summarize the raw CSV into mean/std tables:
 ```
@@ -59,6 +82,13 @@ Generate a bar chart (default):
 ```
 python3 -m backend.simulations.plot_results \
   --in experiments/results/benchmark_summary.csv
+```
+
+Add error bars (std):
+```
+python3 -m backend.simulations.plot_results \
+  --in experiments/results/benchmark_summary.csv \
+  --error-bars
 ```
 
 Generate a scatter plot if needed:
@@ -73,6 +103,13 @@ If raw vs risk_adjusted overlaps, generate separate plots:
 python3 -m backend.simulations.plot_results \
   --in experiments/results/benchmark_summary.csv \
   --split-modes
+```
+
+Generate a markdown table for the paper:
+```
+python3 -m backend.simulations.report_results \
+  --in experiments/results/benchmark_summary.csv \
+  --out experiments/results/benchmark_table.md
 ```
 
 ## PPO Raw vs Risk-Adjusted
@@ -105,4 +142,17 @@ python3 -m backend.simulations.run_ppo_compare \
   --inactivity-penalty 0.01 \
   --entropy-coef 0.01 \
   --progress --log-every 2000
+```
+
+## Real-world price CSV
+Use a local CSV (e.g., exported from Yahoo Finance):
+```
+python3 -m backend.simulations.run_benchmark \
+  --prices-csv data/SPY.csv \
+  --price-col Close \
+  --date-col Date \
+  --train-ratio 0.7 \
+  --agents random,rule_based,buy_and_hold,ppo \
+  --episodes 10 --timesteps 20000 --ppo-repeats 1 \
+  --out experiments/results/realdata_results.csv
 ```

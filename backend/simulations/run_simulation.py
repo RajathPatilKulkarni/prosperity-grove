@@ -1,6 +1,7 @@
 import numpy as np
 
 from backend.env.market_env import MarketEnvironment
+from backend.agents.buy_and_hold_agent import BuyAndHoldAgent
 from backend.agents.random_agent import RandomAgent
 from backend.agents.rule_based_agent import RuleBasedAgent
 from backend.agents.ppo_agent import train_ppo
@@ -38,6 +39,7 @@ def run_episode(
     trade_penalty_coeff=0.0,
     invalid_action_penalty=0.0,
     inactivity_penalty=0.0,
+    trade_size=1,
 ):
     env = MarketEnvironment(
         prices,
@@ -47,12 +49,15 @@ def run_episode(
         trade_penalty_coeff=trade_penalty_coeff,
         invalid_action_penalty=invalid_action_penalty,
         inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
     )
 
     if agent_type == "random":
         agent = RandomAgent(seed=seed)
     elif agent_type == "rule_based":
         agent = RuleBasedAgent()
+    elif agent_type == "buy_and_hold":
+        agent = BuyAndHoldAgent()
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
 
@@ -96,6 +101,88 @@ def run_episode(
     })
 
 
+def run_ppo_train_eval(
+    train_prices,
+    eval_prices,
+    timesteps=10_000,
+    reward_mode="raw",
+    drawdown_coeff=0.01,
+    volatility_coeff=0.01,
+    trade_penalty_coeff=0.0,
+    invalid_action_penalty=0.0,
+    inactivity_penalty=0.0,
+    trade_size=1,
+    entropy_coef=0.0,
+    progress=False,
+    log_every=5000,
+    progress_label="PPO",
+):
+    model = train_ppo(
+        train_prices,
+        timesteps=timesteps,
+        reward_mode=reward_mode,
+        drawdown_coeff=drawdown_coeff,
+        volatility_coeff=volatility_coeff,
+        trade_penalty_coeff=trade_penalty_coeff,
+        invalid_action_penalty=invalid_action_penalty,
+        inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
+        entropy_coef=entropy_coef,
+        progress=progress,
+        log_every=log_every,
+        progress_label=progress_label,
+    )
+    env = RLMarketEnv(
+        eval_prices,
+        reward_mode=reward_mode,
+        drawdown_coeff=drawdown_coeff,
+        volatility_coeff=volatility_coeff,
+        trade_penalty_coeff=trade_penalty_coeff,
+        invalid_action_penalty=invalid_action_penalty,
+        inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
+    )
+
+    obs, _ = env.reset()
+    done = False
+    total_reward = 0.0
+    history = []
+    actions = []
+
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        obs, reward, terminated, truncated, _ = env.step(action)
+
+        done = terminated or truncated
+        total_reward += reward
+        history.append(obs[3])  # portfolio value
+        actions.append(int(action))
+
+    returns = compute_returns(history)
+    total_actions = max(1, len(actions))
+    action_counts = {
+        "action_hold_ratio": actions.count(0) / total_actions,
+        "action_buy_ratio": actions.count(1) / total_actions,
+        "action_sell_ratio": actions.count(2) / total_actions,
+        "executed_trade_ratio": env.env.executed_trades / total_actions,
+    }
+    metrics = {
+        "final_value": history[-1],
+        "total_reward": total_reward,
+        "max_drawdown": max_drawdown(history),
+        "volatility": volatility(returns),
+        "sharpe": sharpe_ratio(returns),
+        "turnover": turnover(env.env.executed_trades, len(actions)),
+    }
+    metrics.update(action_counts)
+
+    return make_json_serializable({
+        "metrics": metrics,
+        "trajectory": history,
+        "actions": actions,
+    })
+
+
 # Multi-episode experiment
 def run_experiment(
     prices,
@@ -108,6 +195,7 @@ def run_experiment(
     trade_penalty_coeff=0.0,
     invalid_action_penalty=0.0,
     inactivity_penalty=0.0,
+    trade_size=1,
 ):
     results = []
 
@@ -122,6 +210,7 @@ def run_experiment(
             trade_penalty_coeff=trade_penalty_coeff,
             invalid_action_penalty=invalid_action_penalty,
             inactivity_penalty=inactivity_penalty,
+            trade_size=trade_size,
         )
         results.append(metrics)
 
@@ -162,6 +251,7 @@ def run_ppo_episode(
     trade_penalty_coeff=0.0,
     invalid_action_penalty=0.0,
     inactivity_penalty=0.0,
+    trade_size=1,
     entropy_coef=0.0,
     progress=False,
     log_every=5000,
@@ -176,6 +266,7 @@ def run_ppo_episode(
         trade_penalty_coeff=trade_penalty_coeff,
         invalid_action_penalty=invalid_action_penalty,
         inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
         entropy_coef=entropy_coef,
         progress=progress,
         log_every=log_every,
@@ -189,6 +280,7 @@ def run_ppo_episode(
         trade_penalty_coeff=trade_penalty_coeff,
         invalid_action_penalty=invalid_action_penalty,
         inactivity_penalty=inactivity_penalty,
+        trade_size=trade_size,
     )
 
     obs, _ = env.reset()
@@ -252,6 +344,7 @@ def run_configured_experiment(config: ExperimentConfig):
             trade_penalty_coeff=config.trade_penalty_coeff,
             invalid_action_penalty=config.invalid_action_penalty,
             inactivity_penalty=config.inactivity_penalty,
+            trade_size=config.trade_size,
         )
 
     return run_experiment(
@@ -264,6 +357,7 @@ def run_configured_experiment(config: ExperimentConfig):
         trade_penalty_coeff=config.trade_penalty_coeff,
         invalid_action_penalty=config.invalid_action_penalty,
         inactivity_penalty=config.inactivity_penalty,
+        trade_size=config.trade_size,
     )
 
 

@@ -20,6 +20,7 @@ class RLMarketEnv(gym.Env):
         trade_penalty_coeff=0.0,
         invalid_action_penalty=0.0,
         inactivity_penalty=0.0,
+        trade_size=1,
     ):
         super().__init__()
         self.env = MarketEnvironment(
@@ -30,6 +31,7 @@ class RLMarketEnv(gym.Env):
             trade_penalty_coeff=trade_penalty_coeff,
             invalid_action_penalty=invalid_action_penalty,
             inactivity_penalty=inactivity_penalty,
+            trade_size=trade_size,
         )
 
         self.action_space = spaces.Discrete(3)

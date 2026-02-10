@@ -48,6 +48,12 @@ def parse_args():
         help="Plot kind.",
     )
     parser.add_argument(
+        "--error-bars",
+        dest="error_bars",
+        action="store_true",
+        help="Show std error bars for bar plots when available.",
+    )
+    parser.add_argument(
         "--split-modes",
         dest="split_modes",
         action="store_true",
@@ -161,12 +167,25 @@ def plot_rows(rows, args, suffix=None):
                 ): to_float(r[args.metric_y])
                 for r in group
             }
+            errors = {
+                (
+                    r["agent"].strip(),
+                    r["reward_mode"].strip().lower().replace("-", "_"),
+                ): to_float(r.get(f"{args.metric_y}_std"))
+                for r in group
+            }
             x_positions = list(range(len(agents)))
             for idx, mode in enumerate(reward_modes):
                 offset = (idx - (n_modes - 1) / 2) * width
                 ys = []
+                yerrs = []
                 for agent in agents:
                     ys.append(values.get((agent, mode), math.nan))
+                    if args.error_bars:
+                        err_val = errors.get((agent, mode), 0.0)
+                        if math.isnan(err_val):
+                            err_val = 0.0
+                        yerrs.append(err_val)
                 ax.bar(
                     [x + offset for x in x_positions],
                     ys,
@@ -174,6 +193,8 @@ def plot_rows(rows, args, suffix=None):
                     label=mode,
                     color=mode_colors.get(mode, "#999999"),
                     alpha=0.85,
+                    yerr=yerrs if args.error_bars else None,
+                    capsize=3 if args.error_bars else 0,
                 )
             ax.set_title(scenario)
             ax.set_xticks(x_positions)
@@ -240,7 +261,7 @@ def plot_rows(rows, args, suffix=None):
                 fig.legend(
                     handles=mode_handles,
                     loc="upper center",
-                    bbox_to_anchor=(0.5, 0.985),
+                    bbox_to_anchor=(0.5, 1.02),
                     ncol=max(1, len(mode_handles)),
                     frameon=False,
                     title="Reward mode (color)",
@@ -252,6 +273,9 @@ def plot_rows(rows, args, suffix=None):
     if args.kind == "bar" and len(scenario_groups) == 1:
         top = 0.86
         bottom = 0.12
+        save_kwargs["bbox_inches"] = "tight"
+    elif len(scenario_groups) > 1:
+        top = 0.9
         save_kwargs["bbox_inches"] = "tight"
     fig.subplots_adjust(
         top=top, bottom=bottom, left=0.08, right=0.98, wspace=0.25, hspace=0.35
