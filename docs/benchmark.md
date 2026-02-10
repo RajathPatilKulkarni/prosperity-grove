@@ -71,6 +71,14 @@ python3 -m backend.simulations.run_benchmark \
   --entropy-coef 0.05 \
   --trade-size 50
 ```
+
+## Paper suite
+Run a full sweep, plot, and table export in one command:
+```
+python3 experiments/run_paper_suite.py \
+  --episodes 5 --ppo-repeats 5 --error-bars
+```
+Outputs are written to `experiments/results/`.
 ## Summaries + Plot
 Summarize the raw CSV into mean/std tables:
 ```
