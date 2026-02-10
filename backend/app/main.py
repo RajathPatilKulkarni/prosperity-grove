@@ -17,13 +17,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://prosperity-grove.netlify.app",
-    ],
-    allow_origin_regex=r"https://.*\\.netlify\\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -122,4 +117,9 @@ def run_experiment_stream(request: ExperimentRequest):
 
 @app.options("/run-experiment/stream")
 def run_experiment_stream_options():
+    return Response(status_code=204)
+
+
+@app.options("/{path:path}")
+def options_catch_all(path: str):
     return Response(status_code=204)
