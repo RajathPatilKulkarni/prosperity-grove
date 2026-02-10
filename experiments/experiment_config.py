@@ -17,6 +17,7 @@ class ExperimentConfig:
         trade_penalty_coeff: float = 0.0,
         invalid_action_penalty: float = 0.0,
         inactivity_penalty: float = 0.0,
+        trade_size: int = 1,
     ):
         self.scenario = scenario
         self.agent_type = agent_type
@@ -30,6 +31,7 @@ class ExperimentConfig:
         self.trade_penalty_coeff = trade_penalty_coeff
         self.invalid_action_penalty = invalid_action_penalty
         self.inactivity_penalty = inactivity_penalty
+        self.trade_size = trade_size
 
     def __repr__(self):
         return (
@@ -45,5 +47,6 @@ class ExperimentConfig:
             f"volatility_coeff={self.volatility_coeff}, "
             f"trade_penalty_coeff={self.trade_penalty_coeff}, "
             f"invalid_action_penalty={self.invalid_action_penalty}, "
-            f"inactivity_penalty={self.inactivity_penalty})"
+            f"inactivity_penalty={self.inactivity_penalty}, "
+            f"trade_size={self.trade_size})"
         )

@@ -4,12 +4,19 @@ from backend.env.rl_env import RLMarketEnv
 
 
 class ProgressCallback(BaseCallback):
-    def __init__(self, total_timesteps, log_every=5000, label="PPO"):
+    def __init__(
+        self,
+        total_timesteps,
+        log_every=5000,
+        label="PPO",
+        on_progress=None,
+    ):
         super().__init__()
         self.total_timesteps = max(1, int(total_timesteps))
         self.log_every = max(1, int(log_every))
         self.next_log = self.log_every
         self.label = label
+        self.on_progress = on_progress
 
     def _on_step(self) -> bool:
         if self.num_timesteps >= self.next_log:
@@ -18,6 +25,10 @@ class ProgressCallback(BaseCallback):
                 f"[{self.label}] {self.num_timesteps}/{self.total_timesteps} "
                 f"({pct:.1f}%)"
             )
+            if self.on_progress:
+                self.on_progress(
+                    self.num_timesteps, self.total_timesteps, pct
+                )
             self.next_log += self.log_every
         return True
 
@@ -36,6 +47,7 @@ def train_ppo(
     progress=False,
     log_every=5000,
     progress_label="PPO",
+    progress_hook=None,
 ):
     env = RLMarketEnv(
         prices,
@@ -59,7 +71,10 @@ def train_ppo(
     callback = None
     if progress:
         callback = ProgressCallback(
-            timesteps, log_every=log_every, label=progress_label
+            timesteps,
+            log_every=log_every,
+            label=progress_label,
+            on_progress=progress_hook,
         )
 
     model.learn(total_timesteps=timesteps, callback=callback)

@@ -116,6 +116,7 @@ def run_ppo_train_eval(
     progress=False,
     log_every=5000,
     progress_label="PPO",
+    progress_hook=None,
 ):
     model = train_ppo(
         train_prices,
@@ -131,6 +132,7 @@ def run_ppo_train_eval(
         progress=progress,
         log_every=log_every,
         progress_label=progress_label,
+        progress_hook=progress_hook,
     )
     env = RLMarketEnv(
         eval_prices,
@@ -256,6 +258,7 @@ def run_ppo_episode(
     progress=False,
     log_every=5000,
     progress_label="PPO",
+    progress_hook=None,
 ):
     model = train_ppo(
         prices,
@@ -271,6 +274,7 @@ def run_ppo_episode(
         progress=progress,
         log_every=log_every,
         progress_label=progress_label,
+        progress_hook=progress_hook,
     )
     env = RLMarketEnv(
         prices,
@@ -324,7 +328,12 @@ def run_ppo_episode(
 
 
 # Config-driven dispatcher
-def run_configured_experiment(config: ExperimentConfig):
+def run_configured_experiment(
+    config: ExperimentConfig,
+    progress=False,
+    log_every=5000,
+    progress_hook=None,
+):
     if config.schedule:
         prices = regime_schedule(
             config.schedule, length=config.schedule_length
@@ -345,6 +354,9 @@ def run_configured_experiment(config: ExperimentConfig):
             invalid_action_penalty=config.invalid_action_penalty,
             inactivity_penalty=config.inactivity_penalty,
             trade_size=config.trade_size,
+            progress=progress,
+            log_every=log_every,
+            progress_hook=progress_hook,
         )
 
     return run_experiment(
