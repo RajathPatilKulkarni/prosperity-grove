@@ -1,20 +1,40 @@
 # Prosperity Grove
 
-Prosperity Grove is an AI-powered financial decision-making simulator focused on long-term wealth behavior and risk dynamics. It combines a simulation environment, baseline agents, PPO training, and a console-style UI for running and inspecting experiments.
+Prosperity Grove is an AI-powered financial decision-making simulator focused on long-term wealth behavior and risk dynamics. It combines a market simulator, baseline agents, PPO training, and a console-style UI for running and inspecting experiments.
 
-**Highlights**
-- Market regime simulator with risk-adjusted rewards
-- Baselines: random, rule_based, buy_and_hold, PPO
-- Regime-shift benchmark and reporting utilities
-- Live console UI with streaming progress
+**Core Objectives**
+- Provide a controllable market simulator with multiple regimes.
+- Compare baseline agents against PPO under raw and risk-adjusted rewards.
+- Offer a reproducible benchmark pipeline for research reporting.
+- Present results through a console UI with live progress and diagnostics.
 
-**Repository layout**
-- `backend/`: FastAPI service, agents, environments, simulations
-- `frontend/`: Vite + React research console
-- `experiments/`: scenarios, configs, and result tools
-- `docs/`: benchmark and architecture notes
+**Key Capabilities**
+- Market regime simulator with reward shaping and trade penalties.
+- Agents: random, rule_based, buy_and_hold, PPO.
+- Regime-shift benchmark + reporting utilities.
+- Streaming experiment progress (NDJSON) in the UI.
+- Live metrics, action mix, and trajectory visualization.
 
-**Quickstart (local)**
+**Technology Stack**
+- Backend: FastAPI, Python 3.11/3.12.
+- RL: stable-baselines3 (PPO), gymnasium, torch.
+- Data: numpy, pandas.
+- Frontend: Vite, React, CSS animations.
+- Deployment: Render (API) + Netlify (UI).
+
+**UI Animations**
+- Panel reveal: subtle fade + slide on load.
+- Sparkline draw: animated path for the latest trajectory.
+- Bar rise: action mix bars animate into place.
+- Log fade: new log lines fade in for readability.
+
+**Repository Layout**
+- `backend/`: FastAPI service, agents, environments, simulations.
+- `frontend/`: Vite + React research console.
+- `experiments/`: scenarios, configs, and result tools.
+- `docs/`: benchmark and architecture notes.
+
+**Quickstart (Local)**
 1. Backend
 ```
 python3 -m venv .venv
@@ -29,13 +49,52 @@ npm install
 VITE_API_BASE=http://127.0.0.1:8000 npm run dev
 ```
 
-**API**
-- `POST /run-experiment` returns a full experiment result
-- `POST /run-experiment/stream` streams progress + results (NDJSON)
-- `GET /` health check
+**API Endpoints**
+- `GET /` health check.
+- `POST /run-experiment` returns a complete experiment result.
+- `POST /run-experiment/stream` streams progress + result (NDJSON).
+
+**Experiment Flow**
+```mermaid
+flowchart LR
+  UI["Console UI"] -->|POST config| API["FastAPI"]
+  API --> SIM["Experiment Runner"]
+  SIM --> ENV["Market Environment"]
+  SIM --> AGENT["Agent (Random/Rule/PPO)"]
+  ENV --> SIM
+  AGENT --> SIM
+  SIM -->|metrics + trajectory| API
+  API -->|NDJSON stream| UI
+```
+
+**Streaming Progress Flow**
+```mermaid
+sequenceDiagram
+  participant UI as Console UI
+  participant API as FastAPI
+  participant PPO as PPO Trainer
+  UI->>API: POST /run-experiment/stream (config)
+  API->>PPO: start training
+  loop progress
+    PPO-->>API: step, pct
+    API-->>UI: NDJSON {type:"progress", pct}
+  end
+  PPO-->>API: result
+  API-->>UI: NDJSON {type:"result"}
+```
+
+**Benchmark Pipeline**
+```mermaid
+flowchart LR
+  RUN["run_benchmark.py"] --> CSV["benchmark_results.csv"]
+  CSV --> SUM["summarize_results.py"]
+  SUM --> OUT["benchmark_summary.csv"]
+  OUT --> PLOT["plot_results.py"]
+  OUT --> TABLE["report_results.py"]
+```
 
 **Benchmarking**
-See `docs/benchmark.md` for the full benchmark workflow, including reporting and plot generation. A one-shot script is available:
+See `docs/benchmark.md` for the full workflow, including reporting and plot generation.
 ```
 python3 experiments/run_paper_suite.py --episodes 5 --ppo-repeats 5 --error-bars
 ```
@@ -51,4 +110,4 @@ python3 experiments/run_paper_suite.py --episodes 5 --ppo-repeats 5 --error-bars
 - Env var: `VITE_API_BASE=https://<your-render-app>.onrender.com`
 
 **Notes**
-- Use Python 3.11 or 3.12 for best compatibility with `torch` and `stable-baselines3`.
+- Use Python 3.11 or 3.12 for compatibility with `torch` and `stable-baselines3`.
