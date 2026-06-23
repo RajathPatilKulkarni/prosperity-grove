@@ -483,7 +483,7 @@ export default function ConsoleLayout() {
               <button
                 className="button-ghost"
                 onClick={exportReport}
-                disabled={status === "running" || !lastResult}
+                disabled={status === "running"}
               >
                 Export Report
               </button>
