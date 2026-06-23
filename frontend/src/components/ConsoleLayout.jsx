@@ -33,10 +33,10 @@ export default function ConsoleLayout() {
   const [progressPct, setProgressPct] = useState(null);
   const [form, setForm] = useState({
     scenario: "regime_shift_long",
-    agent_type: "ppo",
+    agent_type: "rule_based",
     reward_mode: "risk_adjusted",
     episodes: 10,
-    timesteps: 20000,
+    timesteps: 2000,
     schedule: "",
     schedule_length: 20,
     drawdown_coeff: 0.1,
