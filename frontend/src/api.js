@@ -1,5 +1,26 @@
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000";
+const LOCAL_API_BASE = "http://127.0.0.1:8000";
+const DEPLOYED_API_BASE = "https://prosperity-grove.onrender.com";
+
+const isLocalHost = ["localhost", "127.0.0.1", ""].includes(
+  window.location.hostname
+);
+
+const API_BASE = (
+  import.meta.env.VITE_API_BASE ||
+  (isLocalHost ? LOCAL_API_BASE : DEPLOYED_API_BASE)
+).replace(/\/$/, "");
+
+const readErrorMessage = async (response) => {
+  const text = await response.text();
+  if (!text) return "Request failed";
+
+  try {
+    const payload = JSON.parse(text);
+    return payload.detail || payload.message || text;
+  } catch {
+    return text;
+  }
+};
 
 export async function runExperiment(payload) {
   const response = await fetch(`${API_BASE}/run-experiment`, {
@@ -11,8 +32,7 @@ export async function runExperiment(payload) {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error);
+    throw new Error(await readErrorMessage(response));
   }
 
   return response.json();
@@ -28,8 +48,9 @@ export async function runExperimentStream(payload, onEvent) {
   });
 
   if (!response.ok || !response.body) {
-    const error = await response.text();
-    throw new Error(error || "Stream failed");
+    throw new Error(
+      response.ok ? "Stream failed" : await readErrorMessage(response)
+    );
   }
 
   const reader = response.body.getReader();
@@ -47,7 +68,7 @@ export async function runExperimentStream(payload, onEvent) {
       try {
         const event = JSON.parse(line);
         onEvent?.(event);
-      } catch (error) {
+      } catch {
         onEvent?.({
           type: "error",
           message: "Stream parse error",

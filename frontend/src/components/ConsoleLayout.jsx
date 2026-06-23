@@ -13,13 +13,6 @@ const formatNumber = (value, digits = 2) => {
   return Number(value).toFixed(digits);
 };
 
-const toPercent = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) {
-    return "NA";
-  }
-  return `${(Number(value) * 100).toFixed(1)}%`;
-};
-
 const meanFromEpisodes = (episodes, key) => {
   if (!episodes || episodes.length === 0) return null;
   const values = episodes
@@ -180,6 +173,35 @@ export default function ConsoleLayout() {
 
   const handleChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const exportReport = () => {
+    if (!lastResult) {
+      appendLog("! error: run an experiment before exporting");
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const report = {
+      project: "Prosperity Grove",
+      exported_at: timestamp,
+      config: form,
+      metrics,
+      result: lastResult,
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeTimestamp = timestamp.replace(/[:.]/g, "-");
+    link.href = url;
+    link.download = `prosperity-grove-report-${safeTimestamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    appendLog("- report exported");
   };
 
   const runSimulation = async () => {
@@ -458,7 +480,13 @@ export default function ConsoleLayout() {
               >
                 {status === "running" ? "Running..." : "Run Experiment"}
               </button>
-              <button className="button-ghost">Export Report</button>
+              <button
+                className="button-ghost"
+                onClick={exportReport}
+                disabled={status === "running" || !lastResult}
+              >
+                Export Report
+              </button>
             </div>
           </Panel>
 
